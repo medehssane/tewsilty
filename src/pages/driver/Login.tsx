@@ -5,10 +5,11 @@ import { Link } from "react-router-dom";
 
 const DriverLogin = () => {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-blue-50 to-blue-100">
       <div className="max-w-md w-full space-y-8 p-8 bg-white rounded-xl shadow-lg">
-        <div className="text-center">
-          <h2 className="text-3xl font-bold text-gray-900">تسجيل دخول السائق</h2>
+        <div className="text-center space-y-4">
+          <h1 className="text-4xl font-bold text-blue-900">مرحباً في توصيلتي</h1>
+          <h2 className="text-2xl font-semibold text-gray-700">تسجيل دخول السائق</h2>
           <p className="mt-2 text-gray-600">أدخل رقم هاتفك وكلمة المرور</p>
         </div>
         
@@ -41,14 +42,14 @@ const DriverLogin = () => {
             </div>
           </div>
 
-          <Button type="submit" className="w-full">
+          <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700">
             تسجيل الدخول
           </Button>
         </form>
 
         <p className="text-center text-sm text-gray-600">
           ليس لديك حساب؟{" "}
-          <Link to="/driver/register" className="text-blue-600 hover:text-blue-500">
+          <Link to="/driver/register" className="text-blue-600 hover:text-blue-700 font-medium">
             إنشاء حساب جديد
           </Link>
         </p>
