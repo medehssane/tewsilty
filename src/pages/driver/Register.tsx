@@ -32,7 +32,8 @@ const DriverRegister = () => {
     }
 
     try {
-      const { error: signUpError, data: { user } } = await supabase.auth.signUp({
+      // 1. تسجيل المستخدم في نظام المصادقة
+      const { data: { user }, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -46,18 +47,29 @@ const DriverRegister = () => {
 
       if (signUpError) throw signUpError;
 
-      if (user) {
-        // إضافة تفاصيل السائق
-        const { error: driverDetailsError } = await supabase
-          .from('driver_details')
-          .insert([
-            {
-              id: user.id,
-              id_number: idNumber,
-            }
-          ]);
+      if (!user) {
+        throw new Error("فشل في إنشاء الحساب");
+      }
 
-        if (driverDetailsError) throw driverDetailsError;
+      // 2. إضافة تفاصيل السائق بعد التأكد من نجاح التسجيل
+      const { error: driverDetailsError } = await supabase
+        .from('driver_details')
+        .insert([
+          {
+            id: user.id,
+            id_number: idNumber,
+          }
+        ]);
+
+      if (driverDetailsError) {
+        // في حالة فشل إضافة تفاصيل السائق، نقوم بإظهار رسالة خطأ
+        toast({
+          title: "خطأ في إضافة تفاصيل السائق",
+          description: driverDetailsError.message,
+          variant: "destructive",
+        });
+        setIsLoading(false);
+        return;
       }
 
       toast({
@@ -65,6 +77,7 @@ const DriverRegister = () => {
         description: "مرحباً بك في توصيلتي",
       });
 
+      // توجيه المستخدم إلى لوحة التحكم
       navigate("/driver/dashboard");
     } catch (error: any) {
       toast({
