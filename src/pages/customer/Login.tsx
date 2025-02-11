@@ -7,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 
 const CustomerLogin = () => {
-  const [phoneNumber, setPhoneNumber] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
@@ -19,7 +19,7 @@ const CustomerLogin = () => {
 
     try {
       const { error } = await supabase.auth.signInWithPassword({
-        phone: phoneNumber,
+        email,
         password,
       });
 
@@ -47,23 +47,23 @@ const CustomerLogin = () => {
       <div className="max-w-md w-full space-y-8 p-8 bg-white rounded-xl shadow-lg">
         <div className="text-center">
           <h2 className="text-3xl font-bold text-gray-900">تسجيل دخول العميل</h2>
-          <p className="mt-2 text-gray-600">أدخل رقم هاتفك وكلمة المرور</p>
+          <p className="mt-2 text-gray-600">أدخل بريدك الإلكتروني وكلمة المرور</p>
         </div>
         
         <form className="mt-8 space-y-6" onSubmit={handleLogin}>
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700">
-                رقم الهاتف
+                البريد الإلكتروني
               </label>
               <Input
-                type="tel"
+                type="email"
                 required
                 className="mt-1"
-                placeholder="أدخل رقم هاتفك"
+                placeholder="أدخل بريدك الإلكتروني"
                 dir="rtl"
-                value={phoneNumber}
-                onChange={(e) => setPhoneNumber(e.target.value)}
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
               />
             </div>
             

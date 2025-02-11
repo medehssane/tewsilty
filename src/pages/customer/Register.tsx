@@ -8,6 +8,7 @@ import { useToast } from "@/components/ui/use-toast";
 
 const CustomerRegister = () => {
   const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -31,7 +32,7 @@ const CustomerRegister = () => {
 
     try {
       const { error } = await supabase.auth.signUp({
-        phone: phoneNumber,
+        email,
         password,
         options: {
           data: {
@@ -83,6 +84,21 @@ const CustomerRegister = () => {
                 dir="rtl"
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                البريد الإلكتروني
+              </label>
+              <Input
+                type="email"
+                required
+                className="mt-1"
+                placeholder="أدخل بريدك الإلكتروني"
+                dir="rtl"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
               />
             </div>
 
