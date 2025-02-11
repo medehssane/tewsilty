@@ -9,6 +9,38 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      driver_details: {
+        Row: {
+          created_at: string | null
+          id: string
+          id_number: string
+          updated_at: string | null
+          verification_status: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id: string
+          id_number: string
+          updated_at?: string | null
+          verification_status?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          id_number?: string
+          updated_at?: string | null
+          verification_status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "driver_details_id_fkey"
+            columns: ["id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       Nm: {
         Row: {
           created_at: string
@@ -24,6 +56,87 @@ export type Database = {
         }
         Relationships: []
       }
+      orders: {
+        Row: {
+          created_at: string | null
+          customer_id: string | null
+          delivery_location: string
+          details: string | null
+          driver_id: string | null
+          id: string
+          pickup_location: string
+          recipient_phone: string
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          customer_id?: string | null
+          delivery_location: string
+          details?: string | null
+          driver_id?: string | null
+          id?: string
+          pickup_location: string
+          recipient_phone: string
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          customer_id?: string | null
+          delivery_location?: string
+          details?: string | null
+          driver_id?: string | null
+          id?: string
+          pickup_location?: string
+          recipient_phone?: string
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "orders_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          created_at: string | null
+          full_name: string
+          id: string
+          phone_number: string
+          updated_at: string | null
+          user_type: Database["public"]["Enums"]["user_type"]
+        }
+        Insert: {
+          created_at?: string | null
+          full_name: string
+          id: string
+          phone_number: string
+          updated_at?: string | null
+          user_type: Database["public"]["Enums"]["user_type"]
+        }
+        Update: {
+          created_at?: string | null
+          full_name?: string
+          id?: string
+          phone_number?: string
+          updated_at?: string | null
+          user_type?: Database["public"]["Enums"]["user_type"]
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -32,7 +145,7 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      user_type: "customer" | "driver"
     }
     CompositeTypes: {
       [_ in never]: never
