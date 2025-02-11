@@ -1,9 +1,82 @@
 
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/components/ui/use-toast";
 
 const DriverRegister = () => {
+  const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [idNumber, setIdNumber] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const navigate = useNavigate();
+  const { toast } = useToast();
+
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+
+    if (password !== confirmPassword) {
+      toast({
+        title: "خطأ في كلمة المرور",
+        description: "كلمة المرور وتأكيدها غير متطابقين",
+        variant: "destructive",
+      });
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      const { error: signUpError, data: { user } } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            full_name: fullName,
+            phone_number: phoneNumber,
+            user_type: "driver",
+          },
+        },
+      });
+
+      if (signUpError) throw signUpError;
+
+      if (user) {
+        // إضافة تفاصيل السائق
+        const { error: driverDetailsError } = await supabase
+          .from('driver_details')
+          .insert([
+            {
+              id: user.id,
+              id_number: idNumber,
+            }
+          ]);
+
+        if (driverDetailsError) throw driverDetailsError;
+      }
+
+      toast({
+        title: "تم إنشاء الحساب بنجاح",
+        description: "مرحباً بك في توصيلتي",
+      });
+
+      navigate("/driver/dashboard");
+    } catch (error: any) {
+      toast({
+        title: "خطأ في إنشاء الحساب",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
       <div className="max-w-md w-full space-y-8 p-8 bg-white rounded-xl shadow-lg">
@@ -12,7 +85,7 @@ const DriverRegister = () => {
           <p className="mt-2 text-gray-600">أدخل بياناتك لإنشاء حساب سائق توصيل</p>
         </div>
         
-        <form className="mt-8 space-y-6">
+        <form className="mt-8 space-y-6" onSubmit={handleRegister}>
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700">
@@ -24,6 +97,23 @@ const DriverRegister = () => {
                 className="mt-1"
                 placeholder="أدخل اسمك الكامل"
                 dir="rtl"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                البريد الإلكتروني
+              </label>
+              <Input
+                type="email"
+                required
+                className="mt-1"
+                placeholder="أدخل بريدك الإلكتروني"
+                dir="rtl"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
               />
             </div>
 
@@ -37,6 +127,8 @@ const DriverRegister = () => {
                 className="mt-1"
                 placeholder="أدخل رقم هاتفك"
                 dir="rtl"
+                value={phoneNumber}
+                onChange={(e) => setPhoneNumber(e.target.value)}
               />
             </div>
 
@@ -50,6 +142,8 @@ const DriverRegister = () => {
                 className="mt-1"
                 placeholder="أدخل رقم الهوية أو الإقامة"
                 dir="rtl"
+                value={idNumber}
+                onChange={(e) => setIdNumber(e.target.value)}
               />
             </div>
             
@@ -63,6 +157,8 @@ const DriverRegister = () => {
                 className="mt-1"
                 placeholder="أدخل كلمة المرور"
                 dir="rtl"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
               />
             </div>
 
@@ -76,12 +172,14 @@ const DriverRegister = () => {
                 className="mt-1"
                 placeholder="أعد إدخال كلمة المرور"
                 dir="rtl"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
               />
             </div>
           </div>
 
-          <Button type="submit" className="w-full">
-            إنشاء حساب
+          <Button type="submit" className="w-full" disabled={isLoading}>
+            {isLoading ? "جاري إنشاء الحساب..." : "إنشاء حساب"}
           </Button>
         </form>
 
