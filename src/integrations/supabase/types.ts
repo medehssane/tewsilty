@@ -123,37 +123,52 @@ export type Database = {
       }
       orders: {
         Row: {
+          cancelled_reason: string | null
           created_at: string | null
           customer_id: string | null
           delivery_location: string
           details: string | null
           driver_id: string | null
+          driver_latitude: number | null
+          driver_longitude: number | null
           id: string
+          pickup_latitude: number | null
           pickup_location: string
+          pickup_longitude: number | null
           recipient_phone: string
           status: string | null
           updated_at: string | null
         }
         Insert: {
+          cancelled_reason?: string | null
           created_at?: string | null
           customer_id?: string | null
           delivery_location: string
           details?: string | null
           driver_id?: string | null
+          driver_latitude?: number | null
+          driver_longitude?: number | null
           id?: string
+          pickup_latitude?: number | null
           pickup_location: string
+          pickup_longitude?: number | null
           recipient_phone: string
           status?: string | null
           updated_at?: string | null
         }
         Update: {
+          cancelled_reason?: string | null
           created_at?: string | null
           customer_id?: string | null
           delivery_location?: string
           details?: string | null
           driver_id?: string | null
+          driver_latitude?: number | null
+          driver_longitude?: number | null
           id?: string
+          pickup_latitude?: number | null
           pickup_location?: string
+          pickup_longitude?: number | null
           recipient_phone?: string
           status?: string | null
           updated_at?: string | null

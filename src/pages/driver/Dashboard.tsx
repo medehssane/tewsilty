@@ -13,6 +13,9 @@ type Order = {
   recipient_phone: string;
   status: string;
   created_at: string;
+  pickup_latitude: number | null;
+  pickup_longitude: number | null;
+  cancelled_reason: string | null;
   customer: {
     full_name: string;
     phone_number: string;
@@ -23,9 +26,73 @@ const DriverDashboard = () => {
   const [availableOrders, setAvailableOrders] = useState<Order[]>([]);
   const [myOrders, setMyOrders] = useState<Order[]>([]);
   const [completedOrders, setCompletedOrders] = useState<Order[]>([]);
+  const [driverLocation, setDriverLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
+
+  // تحديث موقع السائق
+  useEffect(() => {
+    if ('geolocation' in navigator) {
+      navigator.geolocation.watchPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          setDriverLocation({ latitude, longitude });
+          
+          // تحديث موقع السائق في قاعدة البيانات إذا كان لديه طلبات نشطة
+          if (user?.id && myOrders.length > 0) {
+            supabase
+              .from('orders')
+              .update({
+                driver_latitude: latitude,
+                driver_longitude: longitude
+              })
+              .eq('driver_id', user.id)
+              .in('status', ['accepted', 'in_progress']);
+          }
+        },
+        (error) => {
+          console.error('خطأ في تحديد الموقع:', error);
+          toast({
+            title: "تنبيه",
+            description: "يرجى تفعيل خدمة تحديد الموقع للحصول على الطلبات",
+            variant: "destructive",
+          });
+        }
+      );
+    }
+  }, [user?.id, myOrders.length]);
+
+  // الاستماع إلى الإشعارات المباشرة للطلبات الجديدة
+  useEffect(() => {
+    const channel = supabase
+      .channel('orders_channel')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'orders'
+        },
+        (payload) => {
+          console.log('تم استلام تحديث:', payload);
+          fetchOrders(); // تحديث قائمة الطلبات
+          
+          // إظهار إشعار للطلبات الجديدة
+          if (payload.eventType === 'INSERT' && payload.new.status === 'pending') {
+            toast({
+              title: "طلب جديد!",
+              description: `طلب جديد من ${payload.new.pickup_location}`,
+            });
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
 
   const fetchOrders = async () => {
     try {
@@ -84,27 +151,80 @@ const DriverDashboard = () => {
   }, [user?.id]);
 
   const handleAcceptOrder = async (orderId: string) => {
+    if (!driverLocation) {
+      toast({
+        title: "تنبيه",
+        description: "يجب تفعيل خدمة تحديد الموقع قبل قبول الطلبات",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsLoading(true);
     try {
       const { error } = await supabase
         .from('orders')
         .update({
           driver_id: user?.id,
-          status: 'accepted'
+          status: 'accepted',
+          driver_latitude: driverLocation.latitude,
+          driver_longitude: driverLocation.longitude
+        })
+        .eq('id', orderId)
+        .eq('status', 'pending'); // للتأكد من أن الطلب ما زال متاحاً
+
+      if (error) {
+        if (error.message.includes('violates row-level security')) {
+          toast({
+            title: "عذراً",
+            description: "تم قبول هذا الطلب من قبل سائق آخر",
+            variant: "destructive",
+          });
+        } else {
+          throw error;
+        }
+      } else {
+        toast({
+          title: "تم قبول الطلب بنجاح",
+          description: "يمكنك الآن بدء التوصيل",
+        });
+      }
+
+      fetchOrders();
+    } catch (error: any) {
+      toast({
+        title: "خطأ في قبول الطلب",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleCancelOrder = async (orderId: string, reason: string = "تم الإلغاء من قبل السائق") => {
+    setIsLoading(true);
+    try {
+      const { error } = await supabase
+        .from('orders')
+        .update({
+          status: 'cancelled',
+          cancelled_reason: reason,
+          driver_id: null
         })
         .eq('id', orderId);
 
       if (error) throw error;
 
       toast({
-        title: "تم قبول الطلب بنجاح",
-        description: "يمكنك الآن بدء التوصيل",
+        title: "تم إلغاء الطلب",
+        description: "تم إعادة الطلب لقائمة الطلبات المتاحة",
       });
 
       fetchOrders();
     } catch (error: any) {
       toast({
-        title: "خطأ في قبول الطلب",
+        title: "خطأ في إلغاء الطلب",
         description: error.message,
         variant: "destructive",
       });
@@ -174,13 +294,23 @@ const DriverDashboard = () => {
               قبول الطلب
             </Button>
           ) : order.status === 'accepted' ? (
-            <Button
-              onClick={() => handleUpdateStatus(order.id, 'in_progress')}
-              disabled={isLoading}
-              className="w-full"
-            >
-              بدء التوصيل
-            </Button>
+            <div className="flex gap-2 w-full">
+              <Button
+                onClick={() => handleUpdateStatus(order.id, 'in_progress')}
+                disabled={isLoading}
+                className="flex-1"
+              >
+                بدء التوصيل
+              </Button>
+              <Button
+                onClick={() => handleCancelOrder(order.id)}
+                disabled={isLoading}
+                variant="destructive"
+                className="flex-1"
+              >
+                إلغاء
+              </Button>
+            </div>
           ) : order.status === 'in_progress' ? (
             <Button
               onClick={() => handleUpdateStatus(order.id, 'completed')}
@@ -192,12 +322,35 @@ const DriverDashboard = () => {
           ) : null}
         </div>
       )}
+
+      {order.cancelled_reason && (
+        <p className="text-sm text-red-600">
+          سبب الإلغاء: {order.cancelled_reason}
+        </p>
+      )}
     </div>
   );
 
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {!driverLocation && (
+          <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6">
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div className="mr-3">
+                <p className="text-sm text-yellow-700">
+                  يرجى تفعيل خدمة تحديد الموقع للحصول على الطلبات
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="bg-white rounded-xl shadow-lg p-6">
           <h1 className="text-2xl font-bold text-gray-900 mb-6">الطلبات المتاحة</h1>
           
