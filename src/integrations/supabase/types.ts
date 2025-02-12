@@ -9,6 +9,24 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      admin_settings: {
+        Row: {
+          created_at: string
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       cities: {
         Row: {
           country_id: number
@@ -192,7 +210,7 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      user_type: "customer" | "driver"
+      user_type: "customer" | "driver" | "admin"
     }
     CompositeTypes: {
       [_ in never]: never
