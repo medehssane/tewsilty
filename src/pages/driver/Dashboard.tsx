@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
@@ -111,9 +110,9 @@ const DriverDashboard = () => {
       pickup_latitude: order.pickup_latitude,
       pickup_longitude: order.pickup_longitude,
       cancelled_reason: order.cancelled_reason,
-      customer: order.customer ? {
-        full_name: order.customer.full_name,
-        phone_number: order.customer.phone_number
+      customer: order.profiles ? {
+        full_name: order.profiles.full_name,
+        phone_number: order.profiles.phone_number
       } : null
     }));
   };
@@ -127,7 +126,7 @@ const DriverDashboard = () => {
         .from('orders')
         .select(`
           *,
-          customer:profiles(full_name, phone_number)
+          profiles!orders_customer_id_fkey (full_name, phone_number)
         `)
         .eq('status', 'pending')
         .order('created_at', { ascending: false });
@@ -140,7 +139,7 @@ const DriverDashboard = () => {
         .from('orders')
         .select(`
           *,
-          customer:profiles(full_name, phone_number)
+          profiles!orders_customer_id_fkey (full_name, phone_number)
         `)
         .eq('driver_id', user.id)
         .in('status', ['accepted', 'in_progress'])
@@ -154,7 +153,7 @@ const DriverDashboard = () => {
         .from('orders')
         .select(`
           *,
-          customer:profiles(full_name, phone_number)
+          profiles!orders_customer_id_fkey (full_name, phone_number)
         `)
         .eq('driver_id', user.id)
         .eq('status', 'completed')
