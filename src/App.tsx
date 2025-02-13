@@ -14,6 +14,7 @@ import CustomerDashboard from "./pages/customer/Dashboard";
 import DriverLogin from "./pages/driver/Login";
 import DriverRegister from "./pages/driver/Register";
 import DriverDashboard from "./pages/driver/Dashboard";
+import AdminLogin from "./pages/admin/Login";
 import AdminDashboard from "./pages/admin/Dashboard";
 import NotFound from "./pages/NotFound";
 
@@ -53,6 +54,7 @@ const App = () => (
               />
             </Route>
             <Route path="/admin">
+              <Route path="login" element={<AdminLogin />} />
               <Route
                 path="dashboard"
                 element={
