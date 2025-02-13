@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
@@ -64,6 +65,8 @@ const DriverDashboard = () => {
 
   // الاستماع إلى الإشعارات المباشرة للطلبات الجديدة
   useEffect(() => {
+    if (!user?.id) return;
+
     const channel = supabase
       .channel('orders_channel')
       .on(
@@ -71,7 +74,8 @@ const DriverDashboard = () => {
         {
           event: '*',
           schema: 'public',
-          table: 'orders'
+          table: 'orders',
+          filter: `status=pending OR driver_id=eq.${user.id}`
         },
         (payload) => {
           console.log('تم استلام تحديث:', payload);
@@ -91,9 +95,11 @@ const DriverDashboard = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [user?.id]);
 
   const processOrderData = (data: any[]): Order[] => {
+    if (!Array.isArray(data)) return [];
+    
     return data.map(order => ({
       id: order.id,
       pickup_location: order.pickup_location,
@@ -113,6 +119,8 @@ const DriverDashboard = () => {
   };
 
   const fetchOrders = async () => {
+    if (!user?.id) return;
+
     try {
       // جلب الطلبات المتاحة
       const { data: available, error: availableError } = await supabase
@@ -134,7 +142,7 @@ const DriverDashboard = () => {
           *,
           customer:profiles(full_name, phone_number)
         `)
-        .eq('driver_id', user?.id)
+        .eq('driver_id', user.id)
         .in('status', ['accepted', 'in_progress'])
         .order('created_at', { ascending: false });
 
@@ -148,7 +156,7 @@ const DriverDashboard = () => {
           *,
           customer:profiles(full_name, phone_number)
         `)
-        .eq('driver_id', user?.id)
+        .eq('driver_id', user.id)
         .eq('status', 'completed')
         .order('created_at', { ascending: false });
 
@@ -156,6 +164,7 @@ const DriverDashboard = () => {
       setCompletedOrders(processOrderData(completed || []));
 
     } catch (error: any) {
+      console.error('خطأ في جلب الطلبات:', error);
       toast({
         title: "خطأ في جلب الطلبات",
         description: error.message,
@@ -165,10 +174,21 @@ const DriverDashboard = () => {
   };
 
   useEffect(() => {
-    fetchOrders();
+    if (user?.id) {
+      fetchOrders();
+    }
   }, [user?.id]);
 
   const handleAcceptOrder = async (orderId: string) => {
+    if (!user?.id) {
+      toast({
+        title: "خطأ",
+        description: "يجب تسجيل الدخول أولاً",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (!driverLocation) {
       toast({
         title: "تنبيه",
@@ -183,13 +203,15 @@ const DriverDashboard = () => {
       const { error } = await supabase
         .from('orders')
         .update({
-          driver_id: user?.id,
+          driver_id: user.id,
           status: 'accepted',
           driver_latitude: driverLocation.latitude,
           driver_longitude: driverLocation.longitude
         })
         .eq('id', orderId)
-        .eq('status', 'pending'); // للتأكد من أن الطلب ما زال متاحاً
+        .eq('status', 'pending')
+        .select()
+        .single();
 
       if (error) {
         if (error.message.includes('violates row-level security')) {
@@ -206,10 +228,10 @@ const DriverDashboard = () => {
           title: "تم قبول الطلب بنجاح",
           description: "يمكنك الآن بدء التوصيل",
         });
+        await fetchOrders();
       }
-
-      fetchOrders();
     } catch (error: any) {
+      console.error('خطأ في قبول الطلب:', error);
       toast({
         title: "خطأ في قبول الطلب",
         description: error.message,
@@ -221,6 +243,8 @@ const DriverDashboard = () => {
   };
 
   const handleCancelOrder = async (orderId: string, reason: string = "تم الإلغاء من قبل السائق") => {
+    if (!user?.id) return;
+
     setIsLoading(true);
     try {
       const { error } = await supabase
@@ -230,7 +254,8 @@ const DriverDashboard = () => {
           cancelled_reason: reason,
           driver_id: null
         })
-        .eq('id', orderId);
+        .eq('id', orderId)
+        .eq('driver_id', user.id);
 
       if (error) throw error;
 
@@ -239,8 +264,9 @@ const DriverDashboard = () => {
         description: "تم إعادة الطلب لقائمة الطلبات المتاحة",
       });
 
-      fetchOrders();
+      await fetchOrders();
     } catch (error: any) {
+      console.error('خطأ في إلغاء الطلب:', error);
       toast({
         title: "خطأ في إلغاء الطلب",
         description: error.message,
@@ -252,12 +278,15 @@ const DriverDashboard = () => {
   };
 
   const handleUpdateStatus = async (orderId: string, newStatus: string) => {
+    if (!user?.id) return;
+
     setIsLoading(true);
     try {
       const { error } = await supabase
         .from('orders')
         .update({ status: newStatus })
-        .eq('id', orderId);
+        .eq('id', orderId)
+        .eq('driver_id', user.id);
 
       if (error) throw error;
 
@@ -266,8 +295,9 @@ const DriverDashboard = () => {
         description: "تم تحديث حالة الطلب بنجاح",
       });
 
-      fetchOrders();
+      await fetchOrders();
     } catch (error: any) {
+      console.error('خطأ في تحديث حالة الطلب:', error);
       toast({
         title: "خطأ في تحديث حالة الطلب",
         description: error.message,
