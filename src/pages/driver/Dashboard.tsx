@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
@@ -94,6 +93,25 @@ const DriverDashboard = () => {
     };
   }, []);
 
+  const processOrderData = (data: any[]): Order[] => {
+    return data.map(order => ({
+      id: order.id,
+      pickup_location: order.pickup_location,
+      delivery_location: order.delivery_location,
+      details: order.details,
+      recipient_phone: order.recipient_phone,
+      status: order.status,
+      created_at: order.created_at,
+      pickup_latitude: order.pickup_latitude,
+      pickup_longitude: order.pickup_longitude,
+      cancelled_reason: order.cancelled_reason,
+      customer: order.customer ? {
+        full_name: order.customer.full_name,
+        phone_number: order.customer.phone_number
+      } : null
+    }));
+  };
+
   const fetchOrders = async () => {
     try {
       // جلب الطلبات المتاحة
@@ -107,7 +125,7 @@ const DriverDashboard = () => {
         .order('created_at', { ascending: false });
 
       if (availableError) throw availableError;
-      setAvailableOrders(available || []);
+      setAvailableOrders(processOrderData(available || []));
 
       // جلب طلباتي النشطة
       const { data: active, error: activeError } = await supabase
@@ -121,7 +139,7 @@ const DriverDashboard = () => {
         .order('created_at', { ascending: false });
 
       if (activeError) throw activeError;
-      setMyOrders(active || []);
+      setMyOrders(processOrderData(active || []));
 
       // جلب طلباتي المكتملة
       const { data: completed, error: completedError } = await supabase
@@ -135,7 +153,7 @@ const DriverDashboard = () => {
         .order('created_at', { ascending: false });
 
       if (completedError) throw completedError;
-      setCompletedOrders(completed || []);
+      setCompletedOrders(processOrderData(completed || []));
 
     } catch (error: any) {
       toast({
