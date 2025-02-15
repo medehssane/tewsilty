@@ -18,26 +18,34 @@ const AdminLogin = () => {
     setIsLoading(true);
 
     try {
+      // 1. محاولة تسجيل الدخول
       const { data: { user }, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
       if (error) throw error;
+      if (!user) throw new Error("لم يتم العثور على المستخدم");
 
-      // التحقق من أن المستخدم هو مشرف
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('user_type')
-        .eq('id', user.id)
-        .single();
+      // 2. التحقق من أن المستخدم هو مشرف باستخدام الدالة is_admin
+      const { data: isAdmin, error: adminCheckError } = await supabase.rpc('is_admin', {
+        user_id: user.id
+      });
 
-      if (profileError) throw profileError;
+      if (adminCheckError) throw adminCheckError;
 
-      if (profile?.user_type !== 'admin') {
+      if (!isAdmin) {
+        // إذا لم يكن مشرفاً، قم بتسجيل الخروج وإظهار رسالة خطأ
         await supabase.auth.signOut();
-        throw new Error('غير مصرح لك بالدخول كمشرف');
+        throw new Error("غير مصرح لك بالدخول كمشرف");
       }
+
+      // 3. تحديث metadata للمستخدم ليشمل نوع المستخدم
+      const { error: updateError } = await supabase.auth.updateUser({
+        data: { user_type: 'admin' }
+      });
+
+      if (updateError) throw updateError;
 
       toast({
         title: "تم تسجيل الدخول بنجاح",
