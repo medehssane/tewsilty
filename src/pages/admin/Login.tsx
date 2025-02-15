@@ -18,34 +18,36 @@ const AdminLogin = () => {
     setIsLoading(true);
 
     try {
-      // 1. محاولة تسجيل الدخول
-      const { data: { user }, error } = await supabase.auth.signInWithPassword({
+      // 1. التحقق من أن هناك مشرف في النظام
+      const { data: adminExists, error: adminCheckError } = await supabase.rpc('check_admin_exists');
+      
+      if (adminCheckError) throw adminCheckError;
+      
+      if (!adminExists) {
+        throw new Error("لم يتم العثور على أي حساب مشرف في النظام");
+      }
+
+      // 2. محاولة تسجيل الدخول
+      const { data: { user }, error: signInError } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
-      if (error) throw error;
+      if (signInError) throw signInError;
       if (!user) throw new Error("لم يتم العثور على المستخدم");
 
-      // 2. التحقق من أن المستخدم هو مشرف باستخدام الدالة is_admin
-      const { data: isAdmin, error: adminCheckError } = await supabase.rpc('is_admin', {
+      // 3. التحقق من أن المستخدم هو مشرف
+      const { data: isAdmin, error: adminRoleError } = await supabase.rpc('is_admin', {
         user_id: user.id
       });
 
-      if (adminCheckError) throw adminCheckError;
+      if (adminRoleError) throw adminRoleError;
 
       if (!isAdmin) {
         // إذا لم يكن مشرفاً، قم بتسجيل الخروج وإظهار رسالة خطأ
         await supabase.auth.signOut();
         throw new Error("غير مصرح لك بالدخول كمشرف");
       }
-
-      // 3. تحديث metadata للمستخدم ليشمل نوع المستخدم
-      const { error: updateError } = await supabase.auth.updateUser({
-        data: { user_type: 'admin' }
-      });
-
-      if (updateError) throw updateError;
 
       toast({
         title: "تم تسجيل الدخول بنجاح",
@@ -59,6 +61,7 @@ const AdminLogin = () => {
         description: error.message,
         variant: "destructive",
       });
+      console.error('Login error:', error);
     } finally {
       setIsLoading(false);
     }
