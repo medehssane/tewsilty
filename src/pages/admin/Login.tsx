@@ -33,7 +33,13 @@ const AdminLogin = () => {
         password,
       });
 
-      if (signInError) throw signInError;
+      if (signInError) {
+        if (signInError.message === "Invalid login credentials") {
+          throw new Error("بيانات الدخول غير صحيحة");
+        }
+        throw signInError;
+      }
+      
       if (!user) throw new Error("لم يتم العثور على المستخدم");
 
       // 3. التحقق من أن المستخدم هو مشرف
